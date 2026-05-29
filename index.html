@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Expo — PWA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== TOKENS — el selector light/dark de mañana solo cambia [data-theme] ===== */
+:root,[data-theme="dark"]{
+  --bg:#121211; --surface:#1c1c1a; --surface-2:#262623;
+  --text:#f4f1ea; --text-mut:#a09c92; --text-dim:#6f6b62;
+  --border:#2b2b28; --accent:#c9a25e; --accent-ink:#1a160d;
+  --live:#7fae72; --danger:#d86c5a;
+}
+[data-theme="light"]{
+  --bg:#faf8f3; --surface:#fff; --surface-2:#f0ede4;
+  --text:#1a1916; --text-mut:#5f5b51; --text-dim:#908b80;
+  --border:#e6e1d6; --accent:#a87f33; --accent-ink:#fff;
+  --live:#4f7d43; --danger:#c0492f;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{background:#000;font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--text);
+  display:flex;justify-content:center;align-items:flex-start;}
+.app{width:100%;max-width:412px;height:100vh;background:var(--bg);
+  position:relative;overflow:hidden;display:flex;flex-direction:column;}
+@media(min-width:480px){
+  body{padding:26px 0;align-items:center;background:#0a0a0a;}
+  .app{height:884px;border-radius:38px;
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.04);}
+}
+
+/* ===== Top bar ===== */
+.topbar{position:absolute;top:0;left:0;right:0;z-index:30;height:60px;
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+  background:linear-gradient(to bottom,var(--bg) 55%,transparent);}
+.topbar .spacer{flex:1;}
+.icon-btn{width:42px;height:42px;border-radius:50%;border:none;background:transparent;
+  color:var(--text);cursor:pointer;display:grid;place-items:center;transition:background .2s;}
+.icon-btn:hover{background:var(--surface-2);}.icon-btn:active{transform:scale(.92);}
+.icon-btn.hidden{display:none;}
+.icon-btn.liked svg{fill:var(--danger);stroke:var(--danger);}
+
+/* ===== Contenido ===== */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding-top:60px;padding-bottom:74px;}
+.content.has-mini{padding-bottom:132px;}
+.content::-webkit-scrollbar{width:0;}
+.view{animation:fade .4s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.fu{opacity:0;transform:translateY(12px);animation:fade .5s cubic-bezier(.16,.84,.44,1) forwards;}
+.h-display{font-family:'Fraunces',serif;font-weight:600;letter-spacing:-.01em;font-optical-sizing:auto;}
+
+/* ===== HOME ===== */
+.home-hero{position:relative;height:300px;overflow:hidden;}
+.home-hero img{width:100%;height:100%;object-fit:cover;}
+.home-hero .grad{position:absolute;inset:0;background:linear-gradient(to top,var(--bg),transparent 60%);}
+.home-body{padding:0 22px;margin-top:-46px;position:relative;}
+.kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;}
+.home-title{font-size:38px;line-height:1.04;margin:8px 0 4px;}
+.home-meta{color:var(--text-mut);font-size:15px;margin-top:10px;line-height:1.5;}
+.home-intro{color:var(--text-mut);font-size:16px;line-height:1.62;margin-top:20px;}
+.btn-primary{display:inline-flex;align-items:center;gap:9px;margin-top:24px;
+  background:var(--accent);color:var(--accent-ink);border:none;cursor:pointer;
+  font:inherit;font-weight:700;font-size:15px;padding:14px 22px;border-radius:12px;
+  transition:filter .2s,transform .15s;}
+.btn-primary:hover{filter:brightness(1.06);}.btn-primary:active{transform:scale(.98);}
+.presskit{margin-top:32px;padding-top:22px;border-top:1px solid var(--border);}
+.presskit a{display:inline-flex;align-items:center;gap:8px;color:var(--text-mut);font-size:13px;
+  text-decoration:none;cursor:pointer;background:none;border:none;font:inherit;padding:0;}
+.presskit a:hover{color:var(--text);}
+.presskit a svg{color:var(--text-dim);}
+
+/* ===== Page heads ===== */
+.page-head{padding:6px 22px 18px;}
+.page-head .kicker{margin-bottom:6px;}
+.page-head h1{font-size:30px;line-height:1.06;}
+.page-head p{color:var(--text-mut);font-size:15px;line-height:1.55;margin-top:10px;}
+
+/* ===== Catálogo ===== */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 18px;}
+.card{cursor:pointer;}
+.card .ph{width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:var(--surface);
+  box-shadow:0 10px 26px -16px rgba(0,0,0,.6);transition:transform .25s;position:relative;}
+.card .ph img{width:100%;height:100%;object-fit:cover;}
+.card:active .ph{transform:scale(.97);}
+.card .ph .corner{position:absolute;top:8px;left:8px;font-size:10px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;padding:3px 7px;border-radius:6px;backdrop-filter:blur(8px);}
+.card .ph .corner.reserved{background:rgba(201,162,94,.85);color:#1a160d;}
+.card .ph .corner.sold{background:rgba(216,108,90,.85);color:#fff;}
+.card .ct{font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-top:9px;line-height:1.2;}
+.card .ca{color:var(--text-mut);font-size:13px;margin-top:2px;}
+.card .badge{display:inline-flex;align-items:center;gap:4px;margin-top:5px;
+  font-size:11px;color:var(--text-dim);}
+
+/* ===== Curatorial ===== */
+.cura{padding:0 22px;color:var(--text-mut);font-size:16px;line-height:1.62;}
+.cura.clamped p{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+.obras-sub{padding:26px 22px 14px;}
+.obras-sub h2{font-family:'Fraunces',serif;font-weight:600;font-size:21px;letter-spacing:-.01em;}
+
+/* ===== Obra ===== */
+.artwork-wrap{padding:0 20px;}
+.artwork{position:relative;width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;
+  cursor:zoom-in;background:var(--surface);box-shadow:0 18px 50px -24px rgba(0,0,0,.7);}
+.artwork img{width:100%;height:100%;object-fit:cover;display:block;}
+.zoom-hint{position:absolute;right:12px;bottom:12px;width:34px;height:34px;border-radius:50%;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(6px);display:grid;place-items:center;
+  color:#fff;opacity:.9;pointer-events:none;}
+.head{padding:26px 22px 4px;}
+.title{font-family:'Fraunces',serif;font-weight:600;font-size:32px;line-height:1.08;letter-spacing:-.01em;}
+.artist-link{display:inline-flex;align-items:center;gap:11px;margin-top:18px;cursor:pointer;
+  background:none;border:none;padding:0;font:inherit;color:var(--text);}
+.artist-link .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;overflow:hidden;
+  border:1px solid var(--border);}
+.artist-link .avatar img{width:100%;height:100%;object-fit:cover;}
+.artist-link .name{font-weight:600;font-size:16px;border-bottom:1.5px solid transparent;transition:border-color .2s;}
+.artist-link:hover .name{border-color:var(--accent);}
+.artist-link .chev{color:var(--text-dim);}
+
+/* ===== Status + precio ===== */
+.status-row{padding:18px 22px 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.status-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}
+.status-chip .dot{width:7px;height:7px;border-radius:50%;}
+.status-chip.available{background:rgba(127,174,114,.16);color:#a8cf99;}
+.status-chip.available .dot{background:#a8cf99;}
+.status-chip.reserved{background:rgba(201,162,94,.18);color:var(--accent);}
+.status-chip.reserved .dot{background:var(--accent);}
+.status-chip.sold{background:rgba(216,108,90,.16);color:var(--danger);}
+.status-chip.sold .dot{background:var(--danger);}
+.price{font-family:'Fraunces',serif;font-weight:600;font-size:19px;color:var(--text);margin-left:auto;}
+
+.desc{padding:18px 22px 0;color:var(--text-mut);font-size:16px;line-height:1.62;}
+.desc.clamped p{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+.readmore{background:none;border:none;color:var(--text);font:inherit;font-weight:600;
+  cursor:pointer;margin-top:6px;padding:0;}
+.readmore:hover{color:var(--accent);}
+.divider{height:1px;background:var(--border);margin:24px 22px;}
+.section{padding:0 22px;}
+.section h2{font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin-bottom:16px;letter-spacing:-.01em;}
+
+/* Audio inline */
+.audio{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:15px 16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;}
+.audio .body{flex:1;min-width:0;}
+.audio .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);
+  font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:7px;}
+.audio .t{font-weight:600;font-size:15px;line-height:1.3;}
+.audio .play{width:46px;height:46px;border-radius:50%;flex-shrink:0;border:none;
+  background:var(--accent);color:var(--accent-ink);cursor:pointer;display:grid;place-items:center;
+  transition:transform .15s;}
+.audio .play:active{transform:scale(.9);}
+.audio-prog{margin-top:0;padding:0 2px;display:flex;align-items:center;gap:10px;
+  max-height:0;overflow:hidden;opacity:0;transition:max-height .35s,opacity .3s,margin .35s;}
+.audio.active .audio-prog{max-height:40px;opacity:1;margin-top:14px;}
+.audio-prog .track{flex:1;height:4px;border-radius:3px;background:var(--surface-2);position:relative;cursor:pointer;}
+.audio-prog .fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent);border-radius:3px;}
+.audio-prog .time{font-size:12px;color:var(--text-mut);font-variant-numeric:tabular-nums;min-width:36px;}
+.eq{display:none;align-items:flex-end;gap:2px;height:11px;}
+.eq.on{display:inline-flex;}
+.eq span{width:2.5px;background:var(--live);border-radius:2px;height:30%;}
+.eq.on span{animation:eq .9s ease-in-out infinite;}
+.eq span:nth-child(2){animation-delay:.15s;}
+.eq span:nth-child(3){animation-delay:.3s;}
+@keyframes eq{0%,100%{height:30%;}50%{height:100%;}}
+
+/* Mini player */
+.mini{position:absolute;bottom:74px;left:12px;right:12px;z-index:25;
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:10px 14px;display:none;gap:12px;align-items:center;
+  box-shadow:0 8px 30px -12px rgba(0,0,0,.5);}
+.mini.visible{display:flex;}
+.mini .info{flex:1;min-width:0;}
+.mini .mt{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mini .ms{font-size:12px;color:var(--text-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mini .prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--surface-2);border-radius:0 0 16px 16px;overflow:hidden;}
+.mini .pfill{height:100%;width:0;background:var(--accent);transition:width .5s linear;}
+.mini-play{width:36px;height:36px;border-radius:50%;flex-shrink:0;border:none;
+  background:var(--accent);color:var(--accent-ink);cursor:pointer;display:grid;place-items:center;}
+.mini-close{color:var(--text-dim);}
+
+/* Ficha técnica */
+.tech-table{width:100%;border-collapse:collapse;}
+.tech-table tr{border-bottom:1px solid var(--border);}
+.tech-table tr:last-child{border-bottom:none;}
+.tech-table td{padding:11px 0;font-size:14px;vertical-align:top;}
+.tech-table td:first-child{color:var(--text-dim);width:38%;font-size:13px;}
+.tech-table td:last-child{font-weight:500;}
+
+/* Commercial block */
+.commercial{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;}
+.commercial .c-note{font-size:13px;color:var(--text-mut);margin-top:10px;line-height:1.5;}
+.commercial .c-note b{color:var(--text);}
+.btn-reserve{width:100%;padding:15px;border-radius:12px;border:1px solid var(--border);
+  background:transparent;color:var(--text-mut);font:inherit;font-weight:600;font-size:15px;cursor:pointer;
+  margin-top:10px;transition:border-color .2s,color .2s;}
+.btn-reserve:hover{border-color:var(--accent);color:var(--accent);}
+.btn-disabled{width:100%;padding:15px;border-radius:12px;border:1px solid var(--border);
+  background:transparent;color:var(--text-dim);font:inherit;font-weight:600;font-size:15px;cursor:not-allowed;opacity:.6;}
+
+/* Contact form */
+.contact-form{display:flex;flex-direction:column;gap:12px;}
+.contact-form input,.contact-form textarea{background:var(--surface-2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;font:inherit;font-size:15px;color:var(--text);
+  outline:none;resize:none;transition:border-color .2s;}
+.contact-form input:focus,.contact-form textarea:focus{border-color:var(--accent);}
+.contact-form input::placeholder,.contact-form textarea::placeholder{color:var(--text-dim);}
+.contact-form .btn-send{background:var(--accent);color:var(--accent-ink);border:none;
+  border-radius:10px;padding:13px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;
+  transition:filter .2s;}
+.contact-form .btn-send:hover{filter:brightness(1.06);}
+
+/* ===== Artista ===== */
+.artist-hero{position:relative;height:220px;overflow:hidden;}
+.artist-hero img{width:100%;height:100%;object-fit:cover;object-position:top;}
+.artist-hero .grad{position:absolute;inset:0;background:linear-gradient(to top,var(--bg),transparent 55%);}
+.artist-body{padding:0 22px;margin-top:-52px;position:relative;}
+.artist-name{font-size:30px;line-height:1.06;}
+.artist-meta{color:var(--text-mut);font-size:14px;margin-top:8px;}
+.artist-bio{color:var(--text-mut);font-size:16px;line-height:1.62;margin-top:18px;}
+.artist-works{padding:28px 22px 12px;}
+.artist-works h2{font-family:'Fraunces',serif;font-weight:600;font-size:20px;letter-spacing:-.01em;margin-bottom:14px;}
+.artist-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.artist-grid .th{aspect-ratio:1/1;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--surface);}
+.artist-grid .th img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+.artist-grid .th:active img{transform:scale(1.04);}
+
+/* ===== Artistas list ===== */
+.artist-row{display:flex;align-items:center;gap:14px;padding:14px 22px;cursor:pointer;
+  transition:background .15s;border-bottom:1px solid var(--border);}
+.artist-row:last-child{border-bottom:none;}
+.artist-row:hover{background:var(--surface);}
+.artist-row .av{width:50px;height:50px;border-radius:50%;flex-shrink:0;overflow:hidden;
+  border:1px solid var(--border);}
+.artist-row .av img{width:100%;height:100%;object-fit:cover;}
+.artist-row .info{flex:1;min-width:0;}
+.artist-row .info .n{font-weight:600;font-size:16px;}
+.artist-row .info .s{color:var(--text-mut);font-size:13px;margin-top:2px;}
+.artist-row .chev{color:var(--text-dim);}
+
+/* ===== Scanner ===== */
+.scanner-wrap{padding:24px 22px;}
+.scanner-box{width:100%;aspect-ratio:1/1;border-radius:20px;background:var(--surface);
+  border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;color:var(--text-mut);}
+.scanner-box svg{color:var(--text-dim);}
+.scanner-box p{font-size:15px;text-align:center;max-width:200px;line-height:1.5;}
+.scan-history{padding:0 22px;}
+.scan-history h2{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin-bottom:14px;}
+.scan-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.scan-row:last-child{border-bottom:none;}
+.scan-row .sth{width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface);}
+.scan-row .sth img{width:100%;height:100%;object-fit:cover;}
+.scan-row .si{flex:1;}
+.scan-row .si .st{font-weight:600;font-size:14px;}
+.scan-row .si .ss{font-size:12px;color:var(--text-mut);}
+
+/* ===== Bottom nav ===== */
+.nav{position:absolute;bottom:0;left:0;right:0;z-index:20;height:74px;
+  display:flex;align-items:center;background:var(--bg);
+  border-top:1px solid var(--border);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;cursor:pointer;padding:8px 0;background:none;border:none;color:var(--text-dim);
+  font:inherit;font-size:10px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;
+  transition:color .2s;}
+.nav-item svg{transition:transform .2s;}
+.nav-item.active{color:var(--accent);}
+.nav-item.active svg{transform:scale(1.08);}
+
+/* ===== Lightbox ===== */
+.lb{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.94);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .3s;}
+.lb.open{opacity:1;pointer-events:all;}
+.lb img{max-width:94%;max-height:90%;object-fit:contain;border-radius:8px;}
+.lb-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;display:grid;place-items:center;}
+
+/* ===== Toasts ===== */
+.toast-area{position:absolute;top:70px;left:0;right:0;z-index:60;display:flex;flex-direction:column;gap:8px;padding:0 16px;pointer-events:none;}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;
+  font-size:14px;font-weight:500;box-shadow:0 8px 24px -8px rgba(0,0,0,.4);
+  transform:translateY(-8px);opacity:0;transition:transform .3s,opacity .3s;pointer-events:auto;}
+.toast.show{transform:none;opacity:1;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <button class="icon-btn hidden" id="btn-back" aria-label="Volver">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="btn-theme" aria-label="Cambiar tema">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+    <button class="icon-btn hidden" id="btn-like" aria-label="Me gusta">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </button>
+  </header>
+
+  <!-- Scroll area -->
+  <main class="content" id="content"></main>
+
+  <!-- Mini player -->
+  <div class="mini" id="mini">
+    <div class="info">
+      <div class="mt" id="mini-title"></div>
+      <div class="ms" id="mini-sub"></div>
+    </div>
+    <button class="icon-btn mini-play" id="mini-play-btn" aria-label="Play/Pausa">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="icon-btn mini-close" id="mini-close" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="prog"><div class="pfill" id="mini-fill"></div></div>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav class="nav">
+    <button class="nav-item active" data-view="home">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Inicio
+    </button>
+    <button class="nav-item" data-view="catalog">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Obras
+    </button>
+    <button class="nav-item" data-view="artists">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Artistas
+    </button>
+    <button class="nav-item" data-view="scanner">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 15 9 9 6 12 2 12"/></svg>
+      Escanear
+    </button>
+  </nav>
+
+  <!-- Lightbox -->
+  <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
+    <img id="lb-img" src="" alt="">
+    <button class="lb-close" id="lb-close" aria-label="Cerrar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toast-area" id="toast-area"></div>
+
+</div>
+<script>
+/* ========================================================
+   DATA
+   ======================================================== */
+const EXPO = {
+  title:"Naturaleza Suspendida",
+  subtitle:"Exposición colectiva · Sala Principal",
+  dates:"12 mayo – 30 junio 2026",
+  location:"Centro de Arte Contemporáneo, Pamplona",
+  hero:"https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=820&q=80",
+  intro:"Una exploración de la materia orgánica detenida en el tiempo. Cuatro artistas investigan la tensión entre lo efímero y lo permanente a través de la pintura, el grabado y la instalación.",
+  curatorial:"Esta exposición nace de una pregunta compartida: ¿qué ocurre cuando la naturaleza deja de moverse? Los cuatro artistas presentes trabajan desde disciplinas distintas pero convergen en una misma obsesión formal: capturar el instante en que lo vivo se convierte en imagen. La sala se organiza como un recorrido que avanza desde la luz del amanecer hasta la oscuridad de la madrugada, siguiendo un ritmo lumínico que el espectador puede recorrer a su propio paso."
+};
+
+const ARTISTS=[
+  {id:"a1",name:"Elena Vargas",bio:"Pintora sevillana formada en la ESNBA de París. Su trabajo explora la memoria sensorial a través de grandes formatos al óleo.",origin:"Sevilla, 1984",medium:"Óleo sobre lino",photo:"https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80"},
+  {id:"a2",name:"Marc Solà",bio:"Grabador y artista multidisciplinar barcelonés. Combina técnicas tradicionales de grabado calcográfico con procesos digitales.",origin:"Barcelona, 1979",medium:"Grabado calcográfico",photo:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80"}
+];
+
+const WORKS=[
+  {id:"w1",title:"Marea baja",artist:"a1",year:2025,medium:"Óleo sobre lino",dims:"180 × 140 cm",price:"4.800 €",
+   img:"https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=600&q=80",
+   desc:"La superficie marina en reposo absoluto. Vargas trabaja con capas translúcidas de óleo que construyen una profundidad casi fotográfica, pero perturbada por pinceladas gestuales en los márgenes.",
+   commercial:{mode:"artist",note:"Te pondremos en contacto directo con la artista para gestionar la adquisición."},
+   hasAudio:true,audioTitle:"Elena habla sobre Marea baja",audioDur:"2:14"},
+  {id:"w2",title:"Interior con ventana",artist:"a2",year:2024,medium:"Grabado calcográfico",dims:"60 × 45 cm · Ed. 3/8",price:"1.200 €",
+   img:"https://images.unsplash.com/photo-1549887552-cb1071d3e5ca?w=600&q=80",
+   desc:"Una ventana entreabierta que deja pasar una luz imposible. Solà utiliza el aguatinta para construir una atmósfera entre lo doméstico y lo onírico.",
+   commercial:{mode:"none"},
+   hasAudio:false},
+  {id:"w3",title:"Cobre y humo",artist:"a1",year:2026,medium:"Óleo y pigmento mineral",dims:"120 × 100 cm",price:"3.600 €",
+   img:"https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80",
+   desc:"Desarrollada durante una residencia en el norte de Noruega, esta pieza registra la transformación de los metales bajo temperaturas extremas.",
+   commercial:{mode:"gallery",status:"available",note:"Puedes consultar disponibilidad y condiciones de adquisición a través de la sala."},
+   hasAudio:true,audioTitle:"Proceso de creación · Cobre y humo",audioDur:"3:41"},
+  {id:"w4",title:"Estudio nº4",artist:"a2",year:2023,medium:"Aguafuerte y aguatinta",dims:"40 × 30 cm · Ed. 1/5",price:"780 €",
+   img:"https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=600&q=80",
+   desc:"El cuarto de trabajo como espacio de pensamiento. Una de las cinco piezas de la serie Estudios en la que Solà documenta su propio proceso.",
+   commercial:{mode:"gallery",status:"reserved",note:"Esta obra está actualmente reservada. Puedes apuntarte a la lista de espera."},
+   hasAudio:false}
+];
+
+/* ========================================================
+   STATE
+   ======================================================== */
+let currentView='home', navStack=[], audioState={workId:null,playing:false,progress:0,interval:null};
+
+/* ========================================================
+   THEME
+   ======================================================== */
+const root=document.documentElement;
+let theme=root.getAttribute('data-theme')||'dark';
+root.setAttribute('data-theme',theme);
+document.getElementById('btn-theme').addEventListener('click',()=>{
+  theme=theme==='dark'?'light':'dark';
+  root.setAttribute('data-theme',theme);
+});
+
+/* ========================================================
+   NAV
+   ======================================================== */
+const content=document.getElementById('content');
+const btnBack=document.getElementById('btn-back');
+const btnLike=document.getElementById('btn-like');
+
+function navigate(view,data){
+  navStack.push({view:currentView,data:window._currentData});
+  render(view,data);
+}
+function goBack(){
+  const prev=navStack.pop();
+  if(prev) render(prev.view,prev.data);
+}
+btnBack.addEventListener('click',goBack);
+
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    navStack=[];
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render(btn.dataset.view);
+  });
+});
+
+/* ========================================================
+   RENDER
+   ======================================================== */
+function render(view,data){
+  currentView=view;
+  window._currentData=data;
+  const isTop=navStack.length===0;
+  btnBack.classList.toggle('hidden',isTop);
+  btnLike.classList.toggle('hidden',view!=='work');
+  if(view!=='work'){btnLike.classList.remove('liked');}
+
+  const views={home:renderHome,catalog:renderCatalog,work:renderWork,artist:renderArtist,artists:renderArtists,scanner:renderScanner};
+  if(views[view]) views[view](data);
+}
+
+/* ---- HOME ---- */
+function renderHome(){
+  content.innerHTML=`
+  <div class="view">
+    <div class="home-hero">
+      <img src="${EXPO.hero}" alt="Imagen principal de la exposición" loading="lazy" width="412" height="300">
+      <div class="grad"></div>
+    </div>
+    <div class="home-body">
+      <p class="kicker fu" style="animation-delay:.05s">${EXPO.subtitle}</p>
+      <h1 class="home-title h-display fu" style="animation-delay:.1s">${EXPO.title}</h1>
+      <p class="home-meta fu" style="animation-delay:.15s">${EXPO.dates}<br>${EXPO.location}</p>
+      <p class="home-intro fu" style="animation-delay:.2s">${EXPO.intro}</p>
+      <button class="btn-primary fu" style="animation-delay:.25s" onclick="navigate('catalog')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Ver obras
+      </button>
+      <div class="presskit fu" style="animation-delay:.3s">
+        <a href="#" onclick="return false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar dossier de prensa
+        </a>
+      </div>
+    </div>
+    <div class="divider" style="margin-top:36px;"></div>
+    <div style="padding:0 22px 32px">
+      <p class="kicker" style="margin-bottom:14px">Texto curatorial</p>
+      <div class="cura clamped" id="cura-text"><p>${EXPO.curatorial}</p></div>
+      <button class="readmore" id="cura-btn" onclick="toggleCura()">Leer más</button>
+    </div>
+  </div>`;
+}
+function toggleCura(){
+  const el=document.getElementById('cura-text');
+  const btn=document.getElementById('cura-btn');
+  el.classList.toggle('clamped');
+  btn.textContent=el.classList.contains('clamped')?'Leer más':'Leer menos';
+}
+
+/* ---- CATALOG ---- */
+function renderCatalog(){
+  const cards=WORKS.map(w=>{
+    const a=ARTISTS.find(x=>x.id===w.artist);
+    const corner=w.commercial.status==='reserved'?'<span class="corner reserved">Reservada</span>':
+                  w.commercial.status==='sold'?'<span class="corner sold">Vendida</span>':'';
+    return`<div class="card fu" style="animation-delay:${WORKS.indexOf(w)*.07}s" onclick="navigate('work','${w.id}')">
+      <div class="ph">${corner}<img src="${w.img}" alt="${w.title}" loading="lazy" width="200" height="200"></div>
+      <div class="ct">${w.title}</div>
+      <div class="ca">${a?a.name:''}</div>
+      <div class="badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        ${w.year} · ${w.medium}
+      </div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML=`<div class="view">
+    <div class="page-head">
+      <p class="kicker">Catálogo</p>
+      <h1 class="h-display">${WORKS.length} obras</h1>
+      <p>Explora las piezas de esta exposición.</p>
+    </div>
+    <div class="obras-sub"><h2 class="h-display">Naturaleza Suspendida</h2></div>
+    <div class="cura clamped" style="margin-bottom:20px"><p>${EXPO.curatorial.slice(0,180)}…</p></div>
+    <div class="grid">${cards}</div>
+    <div style="height:24px"></div>
+  </div>`;
+}
+
+/* ---- WORK ---- */
+function renderWork(id){
+  const w=WORKS.find(x=>x.id===id);
+  if(!w)return;
+  const a=ARTISTS.find(x=>x.id===w.artist);
+  window._currentData=id;
+
+  // like state
+  const liked=(window._likes||{})[id];
+  btnLike.classList.toggle('liked',!!liked);
+  btnLike.onclick=()=>{
+    window._likes=window._likes||{};
+    window._likes[id]=!window._likes[id];
+    btnLike.classList.toggle('liked',window._likes[id]);
+    showToast(window._likes[id]?'Añadida a favoritos':'Eliminada de favoritos');
+  };
+
+  // status chip
+  const statusMap={available:'<span class="status-chip available"><span class="dot"></span>Disponible</span>',
+    reserved:'<span class="status-chip reserved"><span class="dot"></span>Reservada</span>',
+    sold:'<span class="status-chip sold"><span class="dot"></span>Vendida</span>'};
+  const statusChip=w.commercial.status?statusMap[w.commercial.status]:'';
+
+  // commercial block
+  let commercialHTML='';
+  if(w.commercial.mode==='artist'){
+    commercialHTML=`<div class="commercial">
+      <button class="btn-primary" style="width:100%;justify-content:center" onclick="showToast('En breve nos pondremos en contacto contigo')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Me interesa esta obra
+      </button>
+      <p class="c-note">Te pondremos en contacto directo con <b>${a?a.name:'la artista'}</b> para gestionar la adquisición.</p>
+    </div>`;
+  } else if(w.commercial.mode==='gallery'){
+    if(w.commercial.status==='available'){
+      commercialHTML=`<div class="commercial">
+        <button class="btn-primary" style="width:100%;justify-content:center" onclick="showToast('Solicitud enviada. La sala se pondrá en contacto contigo.')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.06 6.06l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Consultar disponibilidad
+        </button>
+        <p class="c-note">${w.commercial.note}</p>
+      </div>`;
+    } else if(w.commercial.status==='reserved'){
+      commercialHTML=`<div class="commercial">
+        <button class="btn-disabled" disabled>Obra reservada</button>
+        <button class="btn-reserve" onclick="showToast('Te hemos añadido a la lista de espera.')">Apuntarme a lista de espera</button>
+        <p class="c-note">${w.commercial.note}</p>
+      </div>`;
+    }
+  }
+
+  // audio block
+  let audioHTML='';
+  if(w.hasAudio){
+    const isPlaying=audioState.workId===w.id&&audioState.playing;
+    const progPct=audioState.workId===w.id?audioState.progress:0;
+    audioHTML=`
+    <div class="divider"></div>
+    <div class="section">
+      <h2>Audio</h2>
+      <div class="audio${isPlaying?' active':''}" id="audio-block">
+        <button class="play" id="play-btn" onclick="toggleAudio('${w.id}','${w.audioTitle}','${a?a.name:''}','${w.audioDur}')" aria-label="${isPlaying?'Pausar':'Reproducir'}">
+          ${isPlaying
+            ?'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+            :'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>'}
+        </button>
+        <div class="body">
+          <div class="label">
+            <span class="eq${isPlaying?' on':''}" id="eq-icon"><span></span><span></span><span></span><span></span></span>
+            Audioguía
+          </div>
+          <div class="t">${w.audioTitle}</div>
+        </div>
+        <div class="audio-prog">
+          <span class="time" id="audio-elapsed">0:00</span>
+          <div class="track" onclick="seekAudio(event)"><div class="fill" id="audio-fill" style="width:${progPct}%"></div></div>
+          <span class="time">${w.audioDur}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // contact form
+  const contactHTML=`
+  <div class="divider"></div>
+  <div class="section" style="padding-bottom:8px">
+    <h2>Escribe a ${a?a.name.split(' ')[0]:'la artista'}</h2>
+    <div class="contact-form">
+      <input type="text" placeholder="Tu nombre" autocomplete="name">
+      <input type="email" placeholder="Tu email" autocomplete="email">
+      <textarea rows="4" placeholder="Tu mensaje…"></textarea>
+      <button class="btn-send" onclick="handleContactSend(this)">Enviar mensaje</button>
+    </div>
+  </div>`;
+
+  content.innerHTML=`<div class="view">
+    <div class="artwork-wrap">
+      <div class="artwork" onclick="openLb('${w.img}','${w.title}')">
+        <img src="${w.img}" alt="${w.title}" width="412" height="412">
+        <div class="zoom-hint"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>
+      </div>
+    </div>
+    <div class="head">
+      <h1 class="title h-display">${w.title}</h1>
+      <button class="artist-link" onclick="navigate('artist','${a?a.id:''}')">
+        <div class="avatar"><img src="${a?a.photo:''}" alt="${a?a.name:''}" width="34" height="34"></div>
+        <span class="name">${a?a.name:''}</span>
+        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+    ${statusChip||w.price?`<div class="status-row">${statusChip}<span class="price">${w.price}</span></div>`:''}
+    <div class="desc clamped" id="work-desc"><p>${w.desc}</p></div>
+    <button class="readmore" style="padding:0 22px" onclick="toggleDesc()">Leer más</button>
+    <div class="divider"></div>
+    <div class="section" style="padding-bottom:8px">
+      <h2>Ficha técnica</h2>
+      <table class="tech-table">
+        <tr><td>Técnica</td><td>${w.medium}</td></tr>
+        <tr><td>Dimensiones</td><td>${w.dims}</td></tr>
+        <tr><td>Año</td><td>${w.year}</td></tr>
+        ${w.price?`<tr><td>Precio</td><td>${w.price}</td></tr>`:''}
+      </table>
+    </div>
+    ${w.commercial.mode!=='none'?`<div class="divider"></div><div class="section" style="padding-bottom:8px"><h2>Adquisición</h2>${commercialHTML}</div>`:''}
+    ${audioHTML}
+    ${contactHTML}
+    <div style="height:16px"></div>
+  </div>`;
+
+  content.classList.toggle('has-mini', audioState.workId!==null);
+}
+function toggleDesc(){
+  const el=document.getElementById('work-desc');
+  const btn=el.nextElementSibling;
+  el.classList.toggle('clamped');
+  btn.textContent=el.classList.contains('clamped')?'Leer más':'Leer menos';
+}
+
+/* ---- ARTIST ---- */
+function renderArtist(id){
+  const a=ARTISTS.find(x=>x.id===id);
+  if(!a)return;
+  const works=WORKS.filter(w=>w.artist===id);
+  const thumbs=works.map(w=>`<div class="th" onclick="navigate('work','${w.id}')"><img src="${w.img}" alt="${w.title}" loading="lazy" width="120" height="120"></div>`).join('');
+  content.innerHTML=`<div class="view">
+    <div class="artist-hero">
+      <img src="${a.photo}" alt="${a.name}" loading="lazy" width="412" height="220">
+      <div class="grad"></div>
+    </div>
+    <div class="artist-body">
+      <h1 class="artist-name h-display">${a.name}</h1>
+      <p class="artist-meta">${a.origin} · ${a.medium}</p>
+      <p class="artist-bio">${a.bio}</p>
+    </div>
+    <div class="artist-works">
+      <h2>Obras en esta exposición</h2>
+      <div class="artist-grid">${thumbs}</div>
+    </div>
+    <div style="height:16px"></div>
+  </div>`;
+}
+
+/* ---- ARTISTS LIST ---- */
+function renderArtists(){
+  const rows=ARTISTS.map(a=>`
+  <div class="artist-row fu" onclick="navigate('artist','${a.id}')">
+    <div class="av"><img src="${a.photo}" alt="${a.name}" loading="lazy" width="50" height="50"></div>
+    <div class="info"><div class="n">${a.name}</div><div class="s">${a.origin} · ${a.medium}</div></div>
+    <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+  </div>`).join('');
+  content.innerHTML=`<div class="view">
+    <div class="page-head">
+      <p class="kicker">Artistas</p>
+      <h1 class="h-display">${ARTISTS.length} artistas</h1>
+    </div>
+    ${rows}
+  </div>`;
+}
+
+/* ---- SCANNER ---- */
+function renderScanner(){
+  const history=WORKS.slice(0,2).map(w=>{
+    const a=ARTISTS.find(x=>x.id===w.artist);
+    return`<div class="scan-row" onclick="navigate('work','${w.id}')">
+      <div class="sth"><img src="${w.img}" alt="${w.title}" loading="lazy" width="44" height="44"></div>
+      <div class="si"><div class="st">${w.title}</div><div class="ss">${a?a.name:''} · Hace 2 min</div></div>
+    </div>`;
+  }).join('');
+  content.innerHTML=`<div class="view">
+    <div class="page-head">
+      <p class="kicker">Escanear</p>
+      <h1 class="h-display">QR / NFC</h1>
+      <p>Apunta al código de la cartela para abrir la obra directamente.</p>
+    </div>
+    <div class="scanner-wrap">
+      <div class="scanner-box">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4" rx="1"/><rect x="13" y="7" width="4" height="4" rx="1"/><rect x="7" y="13" width="4" height="4" rx="1"/><path d="M13 13h4v4"/></svg>
+        <p>Cámara no disponible en este entorno de previsualización</p>
+      </div>
+    </div>
+    <div class="scan-history">
+      <h2>Escaneados recientemente</h2>
+      ${history}
+    </div>
+  </div>`;
+}
+
+/* ========================================================
+   AUDIO ENGINE
+   ======================================================== */
+function toggleAudio(workId,title,artist,dur){
+  if(audioState.workId===workId){
+    audioState.playing=!audioState.playing;
+    audioState.playing?startAudioTick():stopAudioTick();
+  } else {
+    stopAudioTick();
+    audioState={workId,playing:true,progress:0,interval:null};
+    startAudioTick();
+  }
+  updateMini(title,artist,dur);
+  render('work',workId);
+}
+
+function startAudioTick(){
+  audioState.interval=setInterval(()=>{
+    audioState.progress=Math.min(100,audioState.progress+0.5);
+    const fill=document.getElementById('audio-fill');
+    const mini=document.getElementById('mini-fill');
+    if(fill) fill.style.width=audioState.progress+'%';
+    if(mini) mini.style.width=audioState.progress+'%';
+    const elapsed=document.getElementById('audio-elapsed');
+    if(elapsed){
+      const secs=Math.floor(audioState.progress/100*134);
+      elapsed.textContent=Math.floor(secs/60)+':'+(secs%60+'').padStart(2,'0');
+    }
+    if(audioState.progress>=100){stopAudioTick();audioState.playing=false;}
+  },500);
+}
+function stopAudioTick(){clearInterval(audioState.interval);audioState.interval=null;}
+
+function seekAudio(e){
+  const track=e.currentTarget;
+  const pct=(e.offsetX/track.offsetWidth)*100;
+  audioState.progress=pct;
+  const fill=document.getElementById('audio-fill');
+  if(fill) fill.style.width=pct+'%';
+}
+
+function updateMini(title,artist,dur){
+  const mini=document.getElementById('mini');
+  document.getElementById('mini-title').textContent=title;
+  document.getElementById('mini-sub').textContent=artist+' · '+dur;
+  mini.classList.toggle('visible',audioState.workId!==null);
+  content.classList.toggle('has-mini',audioState.workId!==null);
+  const playBtn=document.getElementById('mini-play-btn');
+  if(playBtn) playBtn.innerHTML=audioState.playing
+    ?'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+    :'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+}
+
+document.getElementById('mini-play-btn').addEventListener('click',()=>{
+  if(!audioState.workId)return;
+  audioState.playing=!audioState.playing;
+  audioState.playing?startAudioTick():stopAudioTick();
+  updateMini(document.getElementById('mini-title').textContent,'','');
+});
+document.getElementById('mini-close').addEventListener('click',()=>{
+  stopAudioTick();
+  audioState={workId:null,playing:false,progress:0,interval:null};
+  document.getElementById('mini').classList.remove('visible');
+  content.classList.remove('has-mini');
+  if(currentView==='work') render('work',window._currentData);
+});
+
+/* ========================================================
+   LIGHTBOX
+   ======================================================== */
+function openLb(src,alt){
+  const lb=document.getElementById('lb');
+  document.getElementById('lb-img').src=src;
+  document.getElementById('lb-img').alt=alt;
+  lb.classList.add('open');
+}
+document.getElementById('lb-close').addEventListener('click',()=>document.getElementById('lb').classList.remove('open'));
+document.getElementById('lb').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+
+/* ========================================================
+   CONTACT
+   ======================================================== */
+function handleContactSend(btn){
+  const form=btn.closest('.contact-form');
+  const inputs=form.querySelectorAll('input,textarea');
+  let ok=true;
+  inputs.forEach(i=>{if(!i.value.trim()){i.style.borderColor='var(--danger)';ok=false;}else{i.style.borderColor='';}});
+  if(!ok){showToast('Por favor, rellena todos los campos.');return;}
+  btn.textContent='Enviado ✓';btn.disabled=true;
+  showToast('Mensaje enviado correctamente.');
+}
+
+/* ========================================================
+   TOASTS
+   ======================================================== */
+function showToast(msg){
+  const area=document.getElementById('toast-area');
+  const t=document.createElement('div');
+  t.className='toast';t.textContent=msg;
+  area.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},2800);
+}
+
+/* ========================================================
+   INIT
+   ======================================================== */
+render('home');
+</script>
+</body>
+</html>
